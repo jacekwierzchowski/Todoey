@@ -13,6 +13,9 @@ class TodoListViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonPressed))
+        navigationItem.rightBarButtonItem?.tintColor = UIColor.white
     }
     
     //MARK - TableView Datasource Methods
@@ -38,6 +41,24 @@ class TodoListViewController: UITableViewController {
             }
         }
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+    
+    //MARK - Add New Items
+    @objc func addButtonPressed() {
+        let ac = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+        var textField = UITextField()
+        
+        ac.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Create new item"
+            textField = alertTextField
+        }
+        
+        ac.addAction(UIAlertAction(title: "Add Item", style: .default) { action in
+            self.itemArray.append(textField.text!)
+            //self.tableView.reloadData()
+        })
+        
+        present(ac, animated: true)
     }
 }
 
