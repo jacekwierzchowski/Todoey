@@ -55,7 +55,7 @@ class TodoListViewController: UITableViewController {
         
         ac.addAction(UIAlertAction(title: "Add Item", style: .default) { action in
             self.itemArray.append(textField.text!)
-            //self.tableView.reloadData()
+            self.tableView.reloadData()
         })
         
         present(ac, animated: true)
