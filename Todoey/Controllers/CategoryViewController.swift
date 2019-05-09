@@ -8,36 +8,57 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
     
-    var categoryArray: Results<Category>?
+    var categories: Results<Category>?
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addButtonPressed))
+        
         navigationItem.rightBarButtonItem?.tintColor = UIColor.white
         
-        navigationController?.view.tintColor = UIColor.white
-        
         loadCategories()
+        
+        tableView.separatorStyle = .none
+        
     }
+    
+    //MARK: - TableView Datasource Methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray?.count ?? 1
+        
+        return categories?.count ?? 1
+        
     }
     
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let category = categoryArray?[indexPath.row]
         
-        cell.textLabel?.text = category?.name ?? "No category added yet."
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
+        if let category = categories?[indexPath.row] {
+            
+            cell.textLabel?.text = category.name
+            
+            guard let categoryColour = UIColor(hexString: category.colour) else {fatalError()}
+            
+            cell.backgroundColor = categoryColour
+            cell.textLabel?.textColor = ContrastColorOf(categoryColour, returnFlat: true)
+            
+        }
         
         return cell
+        
     }
+    
+    
+    //MARK: - TableView Delegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItems", sender: self)
@@ -47,33 +68,11 @@ class CategoryViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray?[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
     }
     
-    //MARK: - TableView Datasource Methods
-    
-    //MARK: - TableView Delegate Methods
-    
-    //MARK: - Data Manipulaiton Methods
-    
-    @objc func addButtonPressed() {
-        let ac = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
-        var textField = UITextField()
-        
-        ac.addTextField { (alertTextField) in
-            alertTextField.placeholder = "Create New Category"
-            textField = alertTextField
-        }
-        
-        ac.addAction(UIAlertAction(title: "Add Category", style: .default) { action in
-            let newCategory = Category()
-            newCategory.name = textField.text!
-            self.save(category: newCategory)
-        })
-        
-        present(ac, animated: true)
-    }
+    //MARK: - Data Manipulation Methods
     
     func save(category: Category) {
         do {
@@ -81,16 +80,64 @@ class CategoryViewController: UITableViewController {
                 realm.add(category)
             }
         } catch {
-            print("Error saving context, \(error)")
+            print("Error saving category \(error)")
         }
         
         tableView.reloadData()
+        
     }
     
     func loadCategories() {
         
-        categoryArray = realm.objects(Category.self)
+        categories  = realm.objects(Category.self)
         
         tableView.reloadData()
+        
     }
+    
+    //MARK: - Delete Data From Swipe
+    
+    override func updateModel(at indexPath: IndexPath) {
+        
+        if let categoryForDeletion = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryForDeletion)
+                }
+            } catch {
+                print("Error deleting category, \(error)")
+            }
+        }
+    }
+    
+    
+    //MARK: - Add New Categories
+    
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
+        var textField = UITextField()
+        
+        let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
+        
+        let action = UIAlertAction(title: "Add", style: .default) { (action) in
+            
+            let newCategory = Category()
+            newCategory.name = textField.text!
+            newCategory.colour = UIColor.randomFlat.hexValue()
+            
+            self.save(category: newCategory)
+            
+        }
+        
+        alert.addAction(action)
+        
+        alert.addTextField { (field) in
+            textField = field
+            textField.placeholder = "Add a new category"
+        }
+        
+        present(alert, animated: true, completion: nil)
+        
+    }
+    
 }
